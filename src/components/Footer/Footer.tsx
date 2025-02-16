@@ -1,12 +1,14 @@
 import classNames from 'classnames';
 import { Status } from '../../App';
+import { TodoHelpers } from '../../types/TodoHelpers';
 
 type FooterProps = {
   counterTodos: number;
   counterCompletedTodos: number;
   status: Status;
   setStatus: React.Dispatch<React.SetStateAction<Status>>;
-  clearCompleted: () => void;
+  clearCompleted: (helpers: TodoHelpers) => void;
+  helpers: TodoHelpers;
 };
 
 export const Footer: React.FC<FooterProps> = ({
@@ -15,6 +17,7 @@ export const Footer: React.FC<FooterProps> = ({
   status,
   setStatus,
   clearCompleted,
+  helpers,
 }) => {
   return (
     <footer className="todoapp__footer" data-cy="Footer">
@@ -45,7 +48,7 @@ export const Footer: React.FC<FooterProps> = ({
         className="todoapp__clear-completed"
         data-cy="ClearCompletedButton"
         disabled={counterCompletedTodos === 0}
-        onClick={clearCompleted}
+        onClick={() => clearCompleted(helpers)}
       >
         Clear completed
       </button>

@@ -8,7 +8,8 @@ import { Header } from './components/Header/Header';
 import { TodoList } from './components/TodoList/TodoList';
 import { Footer } from './components/Footer/Footer';
 import { ErrorNotification } from './components/Error/ErrorNotification';
-import * as todoHelpers from './utils/todoUtils';
+import { clearCompleted, addTodo, completeAllTodo } from './utils/todoUtils';
+import { TodoHelpers } from './types/TodoHelpers';
 
 export enum Status {
   All = 'All',
@@ -16,23 +17,19 @@ export enum Status {
   Completed = 'Completed',
 }
 
-export const App: React.FC<Status> = () => {
+export const App: React.FC = () => {
   const [todos, setTodos] = useState<Todo[]>([]);
   const [status, setStatus] = useState(Status.All);
-  const [query, setQuery] = useState('');
   const [errorMessage, setErrorMessage] = useState('');
   const [counterTodos, setCounterTodos] = useState(0);
   const [counterCompletedTodos, setCounterCompletedTodos] = useState(0);
-  const [editingTodoId, setEditingTodoId] = useState<number | null>(null);
-  const [updatedTitle, setUpdatedTitle] = useState<string>('');
+  const [tempTodo, setTempTodo] = useState<Todo | null>(null);
   const [loadingTodoId, setLoadingTodoId] = useState<number | number[] | null>(
     null,
   );
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [tempTodo, setTempTodo] = useState<Todo | null>(null);
 
   const inputRef = useRef<HTMLInputElement>(null);
-  const editTodoRef = useRef<HTMLInputElement>(null);
   const timerId = useRef(0);
 
   const closeError = () => {
@@ -55,7 +52,7 @@ export const App: React.FC<Status> = () => {
     return todo;
   });
 
-  const todoHelpersParams = {
+  const helpers: TodoHelpers = {
     todos,
     setErrorMessage,
     setIsSubmitting,
@@ -101,134 +98,10 @@ export const App: React.FC<Status> = () => {
   }, [todos]);
 
   useEffect(() => {
-    if (editTodoRef.current !== null) {
-      editTodoRef.current.focus();
-    }
-  }, [editingTodoId]);
-
-  useEffect(() => {
     if (inputRef.current !== null && tempTodo === null) {
       inputRef.current.focus();
     }
   }, [tempTodo]);
-
-  //#endregion
-
-  //#region functions
-
-  const handleDeleteTodo = (todoId: number) => {
-    todoHelpers.deleteTodo(todoId, todoHelpersParams);
-  };
-
-  const handleUpdateTodo = (todo: Todo) => {
-    todoHelpers.updateTodo(todo, todoHelpersParams);
-  };
-
-  const handleCompleteAllTodo = () => {
-    todoHelpers.completeAllTodo(todoHelpersParams);
-  };
-
-  const clearCompleted = () => {
-    todoHelpers.clearCompleted(todoHelpersParams);
-  };
-
-  const checkModalActive = (todo: Todo): string => {
-    if (loadingTodoId === todo.id) {
-      return 'modal overlay is-active';
-    }
-
-    if (
-      loadingTodoId !== null &&
-      Array.isArray(loadingTodoId) &&
-      loadingTodoId.includes(todo.id)
-    ) {
-      return 'modal overlay is-active';
-    }
-
-    return 'modal overlay';
-  };
-
-  const isTempTodoLoading = () => tempTodo !== null && loadingTodoId === 0;
-
-  const startEditTodo = (todo: Todo) => {
-    setEditingTodoId(todo.id);
-    setUpdatedTitle(todo.title);
-  };
-
-  const changeTitleTodo = (selectedTodo: Todo) => {
-    setErrorMessage('');
-    setLoadingTodoId(selectedTodo.id);
-
-    if (updatedTitle.trim() === selectedTodo.title.trim()) {
-      setLoadingTodoId(null);
-      setEditingTodoId(null);
-
-      return;
-    }
-
-    if (updatedTitle.trim() === '') {
-      setLoadingTodoId(selectedTodo.id);
-      handleDeleteTodo(selectedTodo.id);
-    } else {
-      todoService
-        .updateTodo({
-          ...selectedTodo,
-          title: updatedTitle.trim(),
-        })
-        .then(updatedTodo => {
-          setTodos(currentTodos => {
-            return currentTodos.map(todo =>
-              todo.id === updatedTodo.id ? updatedTodo : todo,
-            );
-          });
-          setErrorMessage('');
-        })
-        .catch(error => {
-          setEditingTodoId(selectedTodo.id);
-          setErrorMessage('Unable to update a todo');
-          window.clearTimeout(timerId.current);
-          closeError();
-          throw error;
-        })
-        .finally(() => {
-          setLoadingTodoId(null);
-          setEditingTodoId(null);
-        });
-    }
-  };
-
-  const handleQueryChanged = (newValue: string) => {
-    setQuery(newValue);
-  };
-
-  const reset = () => {
-    setQuery('');
-  };
-
-  const handleSubmit = (event: React.FormEvent<HTMLFormElement>) => {
-    setErrorMessage('');
-    event.preventDefault();
-
-    if (!query.trim()) {
-      setErrorMessage('Title should not be empty');
-      closeError();
-
-      return;
-    }
-
-    todoHelpers
-      .addTodo(todoHelpersParams, {
-        title: query.trim(),
-        userId: todoService.USER_ID,
-        completed: false,
-      })
-      .then(reset)
-      .catch(error => {
-        window.clearTimeout(timerId.current);
-        closeError();
-        throw error;
-      });
-  };
 
   //#endregion
 
@@ -242,30 +115,18 @@ export const App: React.FC<Status> = () => {
 
       <div className="todoapp__content">
         <Header
-          todos={todos}
-          query={query}
-          isSubmitting={isSubmitting}
-          inputRef={inputRef}
           counterCompletedTodos={counterCompletedTodos}
-          handleCompleteAllTodo={handleCompleteAllTodo}
-          handleQueryChanged={handleQueryChanged}
-          handleSubmit={handleSubmit}
+          addTodo={addTodo}
+          completeAllTodo={completeAllTodo}
+          helpers={helpers}
+          isSubmitting={isSubmitting}
         />
 
         <TodoList
           filteredTodos={filteredTodos}
           tempTodo={tempTodo}
-          editTodoRef={editTodoRef}
-          editingTodoId={editingTodoId}
-          updatedTitle={updatedTitle}
-          setUpdatedTitle={setUpdatedTitle}
-          setEditingTodoId={setEditingTodoId}
-          changeTitleTodo={changeTitleTodo}
-          handleUpdateTodo={handleUpdateTodo}
-          startEditTodo={startEditTodo}
-          handleDeleteTodo={handleDeleteTodo}
-          checkModalActive={checkModalActive}
-          isTempTodoLoading={isTempTodoLoading}
+          helpers={helpers}
+          loadingTodoId={loadingTodoId}
         />
 
         {todos.length > 0 && (
@@ -275,6 +136,7 @@ export const App: React.FC<Status> = () => {
             setStatus={setStatus}
             counterCompletedTodos={counterCompletedTodos}
             clearCompleted={clearCompleted}
+            helpers={helpers}
           />
         )}
       </div>

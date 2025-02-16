@@ -1,27 +1,63 @@
 import classNames from 'classnames';
 import { Todo } from '../../types/Todo';
+import { useState } from 'react';
+import * as todoService from '../../api/todos';
+import { TodoHelpers } from '../../types/TodoHelpers';
 
 type HeaderProps = {
-  todos: Todo[];
-  query: string;
   counterCompletedTodos: number;
+  addTodo: (
+    helpers: TodoHelpers,
+    { title, userId, completed }: Omit<Todo, 'id'>,
+  ) => Promise<void>;
+  completeAllTodo: (helpers: TodoHelpers) => void;
+  helpers: TodoHelpers;
   isSubmitting: boolean;
-  inputRef: React.RefObject<HTMLInputElement>;
-  handleCompleteAllTodo: () => void;
-  handleQueryChanged: (newValue: string) => void;
-  handleSubmit: (event: React.FormEvent<HTMLFormElement>) => void;
 };
 
 export const Header: React.FC<HeaderProps> = ({
-  todos,
-  query,
   counterCompletedTodos,
+  addTodo,
+  completeAllTodo,
+  helpers,
   isSubmitting,
-  inputRef,
-  handleCompleteAllTodo,
-  handleQueryChanged,
-  handleSubmit,
 }) => {
+  const [query, setQuery] = useState('');
+
+  const { todos, inputRef, timerId, setErrorMessage, closeError } = helpers;
+
+  const handleQueryChanged = (newValue: string) => {
+    setQuery(newValue);
+  };
+
+  const reset = () => {
+    setQuery('');
+  };
+
+  const handleSubmit = (event: React.FormEvent<HTMLFormElement>) => {
+    setErrorMessage('');
+    event.preventDefault();
+
+    if (!query.trim()) {
+      setErrorMessage('Title should not be empty');
+      closeError();
+
+      return;
+    }
+
+    addTodo(helpers, {
+      title: query.trim(),
+      userId: todoService.USER_ID,
+      completed: false,
+    })
+      .then(reset)
+      .catch(error => {
+        window.clearTimeout(timerId.current);
+        closeError();
+        throw error;
+      });
+  };
+
   return (
     <header className="todoapp__header">
       {todos.length !== 0 && (
@@ -31,7 +67,7 @@ export const Header: React.FC<HeaderProps> = ({
             active: counterCompletedTodos === todos.length,
           })}
           data-cy="ToggleAllButton"
-          onClick={handleCompleteAllTodo}
+          onClick={() => completeAllTodo(helpers)}
         />
       )}
 

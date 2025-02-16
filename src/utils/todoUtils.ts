@@ -1,17 +1,6 @@
 import * as todoService from '../api/todos';
 import { Todo } from '../types/Todo';
-
-type TodoHelpers = {
-  todos: Todo[];
-  setErrorMessage: (msg: string) => void;
-  setIsSubmitting: (status: boolean) => void;
-  setTempTodo: (todo: Todo | null) => void;
-  setLoadingTodoId: (id: number | number[] | null) => void;
-  setTodos: (cb: (todos: Todo[]) => Todo[]) => void;
-  closeError: () => void;
-  timerId: { current: number };
-  inputRef: React.RefObject<HTMLInputElement>;
-};
+import { TodoHelpers } from '../types/TodoHelpers';
 
 export const addTodo = (
   helpers: TodoHelpers,
@@ -183,50 +172,50 @@ export const completeAllTodo = (helpers: TodoHelpers) => {
   } = helpers;
 
   setErrorMessage('');
-    const hasNoCompletedTodos = todos.some(todo => !todo.completed);
-    const newCompletionState = hasNoCompletedTodos ? true : false;
-    const hasTodosId = todos.map(todo => todo.id);
-    const noCompleteTodos = todos.filter(todo => !todo.completed);
-    const completeTodos = todos.filter(todo => todo.completed);
+  const hasNoCompletedTodos = todos.some(todo => !todo.completed);
+  const newCompletionState = hasNoCompletedTodos ? true : false;
+  const hasTodosId = todos.map(todo => todo.id);
+  const noCompleteTodos = todos.filter(todo => !todo.completed);
+  const completeTodos = todos.filter(todo => todo.completed);
 
-    setLoadingTodoId(hasTodosId);
+  setLoadingTodoId(hasTodosId);
 
-    if (noCompleteTodos.length > 0) {
-      setLoadingTodoId(noCompleteTodos.map(todo => todo.id));
-      Promise.all(
-        noCompleteTodos.map(todo =>
-          todoService.updateTodo({ ...todo, completed: true }),
-        ),
-      )
-        .then(todosComplete => {
-          setTodos(() => [...todosComplete, ...completeTodos]);
-          setLoadingTodoId(null);
-          setErrorMessage('');
-        })
-        .catch(error => {
-          setErrorMessage('Unable to update a todo');
-          window.clearTimeout(timerId.current);
-          closeError();
-          throw error;
-        });
-    } else {
-      Promise.all(
-        todos.map(todo =>
-          todoService.updateTodo({ ...todo, completed: newCompletionState }),
-        ),
-      )
-        .then(todosComplete => {
-          const newTodos = todosComplete;
+  if (noCompleteTodos.length > 0) {
+    setLoadingTodoId(noCompleteTodos.map(todo => todo.id));
+    Promise.all(
+      noCompleteTodos.map(todo =>
+        todoService.updateTodo({ ...todo, completed: true }),
+      ),
+    )
+      .then(todosComplete => {
+        setTodos(() => [...todosComplete, ...completeTodos]);
+        setLoadingTodoId(null);
+        setErrorMessage('');
+      })
+      .catch(error => {
+        setErrorMessage('Unable to update a todo');
+        window.clearTimeout(timerId.current);
+        closeError();
+        throw error;
+      });
+  } else {
+    Promise.all(
+      todos.map(todo =>
+        todoService.updateTodo({ ...todo, completed: newCompletionState }),
+      ),
+    )
+      .then(todosComplete => {
+        const newTodos = todosComplete;
 
-          setTodos(() => newTodos);
-          setLoadingTodoId(null);
-          setErrorMessage('');
-        })
-        .catch(error => {
-          setErrorMessage('Unable to update a todo');
-          window.clearTimeout(timerId.current);
-          closeError();
-          throw error;
-        });
-    }
-  };
+        setTodos(() => newTodos);
+        setLoadingTodoId(null);
+        setErrorMessage('');
+      })
+      .catch(error => {
+        setErrorMessage('Unable to update a todo');
+        window.clearTimeout(timerId.current);
+        closeError();
+        throw error;
+      });
+  }
+};
