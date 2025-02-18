@@ -116,7 +116,12 @@ export const TodoItem: React.FC<TodoItemProps> = ({
       </label>
 
       {editingTodoId === id ? (
-        <form>
+        <form
+          onSubmit={event => {
+            event.preventDefault();
+            changeTitleTodo(todo);
+          }}
+        >
           <input
             data-cy="TodoTitleField"
             type="text"
@@ -128,10 +133,6 @@ export const TodoItem: React.FC<TodoItemProps> = ({
               changeTitleTodo(todo);
             }}
             onKeyDown={event => {
-              if (event.key === 'Enter') {
-                changeTitleTodo(todo);
-              }
-
               if (event.key === 'Escape') {
                 setEditingTodoId(null);
               }
